@@ -1,14 +1,14 @@
-﻿
+﻿using System;
+
 class Program
 {
+    // Стартовая точка для приложения
     static void Main(string[] args)
     {
         Phonebook phonebook = Phonebook.Instance;
+        string command;
 
-        // Загружаем абонентов из файла при старте программы
-        phonebook.LoadFromFile("phonebook.txt");
-
-        while (true)
+        do
         {
             Console.WriteLine("Выберите действие:");
             Console.WriteLine("1. Добавить абонента");
@@ -18,9 +18,9 @@ class Program
             Console.WriteLine("5. Показать всех абонентов");
             Console.WriteLine("6. Выход");
 
-            var choice = Console.ReadLine();
+            command = Console.ReadLine()?.ToLower();
 
-            switch (choice)
+            switch (command)
             {
                 case "1":
                     AddAbonent(phonebook);
@@ -29,180 +29,88 @@ class Program
                     RemoveAbonent(phonebook);
                     break;
                 case "3":
-                    FindAbonentByPhone(phonebook);
+                    GetAbonentByPhoneNumber(phonebook);
                     break;
                 case "4":
-                    FindPhoneByAbonentName(phonebook);
+                    GetPhoneNumberByName(phonebook);
                     break;
                 case "5":
                     ShowAllAbonents(phonebook);
                     break;
                 case "6":
-                    phonebook.SaveToFile("phonebook.txt");
-                    return;
+                    Console.WriteLine("Выход из приложения.");
+                    break;
                 default:
-                    Console.WriteLine("Некорректный выбор.");
+                    Console.WriteLine("Неизвестная команда.");
                     break;
             }
         }
+        while (command != "6");
     }
 
-    static void AddAbonent(Phonebook phonebook)
+    private static void AddAbonent(Phonebook phonebook)
     {
         Console.Write("Введите номер телефона: ");
-        string phone = Console.ReadLine();
-
-        Console.Write("Введите имя абонента: ");
+        string phoneNumber = Console.ReadLine();
+        Console.Write("Введите имя: ");
         string name = Console.ReadLine();
 
-        bool added = phonebook.AddAbonent(new Abonent(phone, name));
-        if (added)
+        try
         {
-            Console.WriteLine("Абонент добавлен.");
+            phonebook.AddAbonent(new Abonent(phoneNumber, name));
+            Console.WriteLine($"Абонент {name} добавлен.");
         }
-        else
+        catch (InvalidOperationException ex)
         {
-            Console.WriteLine("Абонент с таким номером уже существует.");
+            Console.WriteLine(ex.Message);
         }
     }
 
-    static void RemoveAbonent(Phonebook phonebook)
+    private static void RemoveAbonent(Phonebook phonebook)
     {
         Console.Write("Введите номер телефона для удаления: ");
-        string phone = Console.ReadLine();
-        bool removed = phonebook.RemoveAbonent(phone);
-        if (removed)
-        {
-            Console.WriteLine("Абонент удален.");
-        }
-        else
-        {
-            Console.WriteLine("Абонент с таким номером не найден.");
-        }
+        string phoneNumber = Console.ReadLine();
+        phonebook.RemoveAbonent(phoneNumber);
+        Console.WriteLine("Абонент удален, если он существовал.");
     }
 
-    static void FindAbonentByPhone(Phonebook phonebook)
+    private static void GetAbonentByPhoneNumber(Phonebook phonebook)
     {
-        Console.Write("Введите номер телефона: ");
-        string phone = Console.ReadLine();
-        var abonent = phonebook.GetAbonentByPhone(phone);
+        Console.Write("Введите номер телефона для поиска: ");
+        string phoneNumber = Console.ReadLine();
+        var abonent = phonebook.GetAbonentByPhoneNumber(phoneNumber);
 
         if (abonent != null)
-        {
-            Console.WriteLine($"Найден абонент: {abonent.Name}");
-        }
+            Console.WriteLine($"Абонент найден: {abonent.Name}");
         else
-        {
-            Console.WriteLine("Абонент с таким номером не найден.");
-        }
+            Console.WriteLine("Абонент не найден.");
     }
 
-    static void FindPhoneByAbonentName(Phonebook phonebook)
+    private static void GetPhoneNumberByName(Phonebook phonebook)
     {
-        Console.Write("Введите имя абонента: ");
+        Console.Write("Введите имя для поиска: ");
         string name = Console.ReadLine();
-        var phone = phonebook.GetPhoneByName(name);
+        string phoneNumber = phonebook.GetPhoneNumberByName(name);
 
-        if (phone != null)
-        {
-            Console.WriteLine($"Номер телефона: {phone}");
-        }
+        if (phoneNumber != null)
+            Console.WriteLine($"Номер телефона: {phoneNumber}");
         else
+            Console.WriteLine("Абонент не найден.");
+    }
+
+    private static void ShowAllAbonents(Phonebook phonebook)
+    {
+        var abonents = phonebook.GetAllAbonents();
+        if (abonents.Count == 0)
         {
-            Console.WriteLine("Абонент с таким именем не найден.");
+            Console.WriteLine("Список абонентов пуст.");
+            return;
         }
-    }
 
-    static void ShowAllAbonents(Phonebook phonebook)
-    {
-        foreach (var abonent in phonebook.GetAllAbonents())
+        Console.WriteLine("Список всех абонентов:");
+        foreach (var abonent in abonents)
         {
-            Console.WriteLine($"Имя: {abonent.Name}, Телефон: {abonent.Phone}");
-        }
-    }
-}
-
-public class Abonent
-{
-    public string Phone { get; }
-    public string Name { get; }
-
-    public Abonent(string phone, string name)
-    {
-        Phone = phone;
-        Name = name;
-    }
-}
-public class Phonebook
-{
-    private static readonly Phonebook _instance = new Phonebook();
-    private List<Abonent> _abonents = new List<Abonent>();
-
-    private Phonebook() { }
-
-    public static Phonebook Instance => _instance;
-
-    public bool AddAbonent(Abonent abonent)
-    {
-        if (_abonents.Any(a => a.Phone == abonent.Phone))
-        {
-            return false; // Абонент с таким номером уже существует
-        }
-        _abonents.Add(abonent);
-        return true;
-    }
-
-    public bool RemoveAbonent(string phone)
-    {
-        var abonentToRemove = _abonents.SingleOrDefault(a => a.Phone == phone);
-        if (abonentToRemove != null)
-        {
-            _abonents.Remove(abonentToRemove);
-            return true;
-        }
-        return false;
-    }
-
-    public Abonent GetAbonentByPhone(string phone)
-    {
-        return _abonents.SingleOrDefault(a => a.Phone == phone);
-    }
-
-    public string GetPhoneByName(string name)
-    {
-        var abonent = _abonents.SingleOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
-        return abonent?.Phone;
-    }
-
-    public IEnumerable<Abonent> GetAllAbonents()
-    {
-        return _abonents;
-    }
-
-    public void SaveToFile(string filename)
-    {
-        using (StreamWriter writer = new StreamWriter(filename))
-        {
-            foreach (var abonent in _abonents)
-            {
-                writer.WriteLine($"{abonent.Phone},{abonent.Name}");
-            }
-        }
-    }
-
-    public void LoadFromFile(string filename)
-    {
-        if (File.Exists(filename))
-        {
-            var lines = File.ReadAllLines(filename);
-            foreach (var line in lines)
-            {
-                var parts = line.Split(',');
-                if (parts.Length == 2)
-                {
-                    AddAbonent(new Abonent(parts[0], parts[1]));
-                }
-            }
+            Console.WriteLine($"Имя: {abonent.Name}, Телефон: {abonent.PhoneNumber}");
         }
     }
 }
